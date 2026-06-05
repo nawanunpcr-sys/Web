@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Legal Registry — ระบบวิเคราะห์กฎหมาย</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">⚖</span>
+          <div>
+            <div class="logo-title">LegalRegistry</div>
+            <div class="logo-sub">ระบบกฎหมายความปลอดภัย</div>
+          </div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+          <span class="nav-icon">◈</span> แดชบอร์ด
+        </button>
+        <button class="nav-item" data-page="gazette" onclick="navigate('gazette')">
+          <span class="nav-icon">◉</span> ดึงข้อมูลราชกิจจาฯ
+        </button>
+        <button class="nav-item" data-page="laws" onclick="navigate('laws')">
+          <span class="nav-icon">◌</span> ฐานข้อมูลกฎหมาย
+        </button>
+        <button class="nav-item" data-page="departments" onclick="navigate('departments')">
+          <span class="nav-icon">◍</span> มอบหมายหน่วยงาน
+        </button>
+        <button class="nav-item" data-page="analyze" onclick="navigate('analyze')">
+          <span class="nav-icon">◎</span> วิเคราะห์กฎหมาย AI
+        </button>
+        <button class="nav-item" data-page="compliance" onclick="navigate('compliance')">
+          <span class="nav-icon">◐</span> บันทึกการปฏิบัติตาม
+        </button>
+        <button class="nav-item" data-page="evaluation" onclick="navigate('evaluation')">
+          <span class="nav-icon">◑</span> ผลการประเมินความสอดคล้อง
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="db-status" id="dbStatus">
+          <span class="status-dot"></span> เชื่อมต่อ Supabase
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+          <div class="breadcrumb" id="breadcrumb">แดชบอร์ด</div>
+        </div>
+        <div class="topbar-right">
+          <div class="topbar-badge">ความปลอดภัย & อาชีวอนามัย</div>
+        </div>
+      </header>
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <div class="page-hero">
+          <h1 class="hero-title">ระบบวิเคราะห์กฎหมาย<br/><span class="accent">ความปลอดภัยและสุขภาพ</span></h1>
+          <p class="hero-sub">ดึงข้อมูลจากราชกิจจานุเบกษา · วิเคราะห์ด้วย AI · ติดตามการปฏิบัติตามกฎหมาย</p>
+        </div>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card" style="--c:#2a9d8f">
+            <div class="stat-num" id="stat-total">—</div>
+            <div class="stat-label">กฎหมายทั้งหมด (ใช้งาน)</div>
+          </div>
+          <div class="stat-card" style="--c:#457b9d">
+            <div class="stat-num" id="stat-compliant">—</div>
+            <div class="stat-label">สอดคล้อง (C)</div>
+          </div>
+          <div class="stat-card" style="--c:#e63946">
+            <div class="stat-num" id="stat-critical">—</div>
+            <div class="stat-label">ไม่สอดคล้อง (NC)</div>
+          </div>
+          <div class="stat-card" style="--c:#c9a84c">
+            <div class="stat-num" id="stat-pct">—</div>
+            <div class="stat-label">% ความสอดคล้องรวม</div>
+          </div>
+        </div>
+        <div class="section-title">ทะเบียนกฎหมายแยกตามหมวด — % ความสอดคล้อง</div>
+        <div class="card">
+          <div id="dashboardCategories" class="eval-bars-container">
+            <div class="loading-state">กำลังโหลด...</div>
+          </div>
+        </div>
+        <div class="section-title">กฎหมายล่าสุด</div>
+        <div class="law-list" id="recentLaws">
+          <div class="loading-state">กำลังโหลด...</div>
+        </div>
+      </div>
+
+      <!-- GAZETTE -->
+      <div id="page-gazette" class="page">
+        <div class="page-header">
+          <h2>ดึงข้อมูลราชกิจจานุเบกษา</h2>
+          <p>ค้นหาและดึงกฎหมายจากเว็บไซต์ราชกิจจานุเบกษา แล้วบันทึกลงฐานข้อมูล</p>
+        </div>
+        <div class="gazette-grid">
+          <div class="card">
+            <div class="card-title">🔍 ค้นหากฎหมาย</div>
+            <div class="form-group">
+              <label>URL ราชกิจจานุเบกษา</label>
+              <input type="url" id="gazetteUrl" placeholder="https://ratchakitchanubeksa.go.th/..." class="input" />
+            </div>
+            <div class="form-group">
+              <label>คำค้นหา (ชื่อกฎหมาย)</label>
+              <input type="text" id="gazetteKeyword" placeholder="เช่น ความปลอดภัย อาชีวอนามัย..." class="input" />
+            </div>
+            <div class="form-group">
+              <label>หมวดหมู่</label>
+              <select id="gazetteCategory" class="input">
+                <option value="">ทุกหมวดหมู่</option>
+                <option value="safety">ความปลอดภัยในการทำงาน</option>
+                <option value="environment">สิ่งแวดล้อม</option>
+                <option value="factory">โรงงาน</option>
+                <option value="labor">แรงงาน</option>
+              </select>
+            </div>
+            <button class="btn-primary" onclick="fetchFromGazette()">
+              <span id="gazetteSpinner" style="display:none">⟳ </span>ดึงข้อมูล
+            </button>
+          </div>
+          <div class="card">
+            <div class="card-title">📋 ผลการค้นหา</div>
+            <div id="gazetteResults" class="gazette-results">
+              <div class="empty-state">กรอก URL หรือคำค้นหา แล้วกดดึงข้อมูล</div>
+            </div>
+          </div>
+        </div>
+        <div class="card" id="gazettePreview" style="display:none">
+          <div class="card-title">📄 ตัวอย่างข้อมูลที่ดึงได้</div>
+          <div id="gazettePreviewContent"></div>
+          <button class="btn-primary" onclick="saveToDatabase()">💾 บันทึกลงฐานข้อมูล</button>
+        </div>
+      </div>
+
+      <!-- LAWS DATABASE -->
+      <div id="page-laws" class="page">
+        <div class="page-header">
+          <h2>ฐานข้อมูลกฎหมาย</h2>
+          <p>กฎหมายทั้งหมดที่เกี่ยวข้องกับความปลอดภัยและสุขภาพในสถานประกอบการ</p>
+        </div>
+        <div class="filter-bar">
+          <input type="text" id="lawSearch" placeholder="ค้นหากฎหมาย..." class="input search-input" oninput="filterLaws()" />
+          <select id="lawStatusFilter" class="input filter-select" onchange="filterLaws()">
+            <option value="">สถานะทั้งหมด</option>
+            <option value="C">✓ สอดคล้อง (C)</option>
+            <option value="NC">✗ ไม่สอดคล้อง (NC)</option>
+            <option value="N/A">— ไม่เกี่ยวข้อง (N/A)</option>
+          </select>
+          <select id="lawPriorityFilter" class="input filter-select" onchange="filterLaws()">
+            <option value="">ทุกหมวด</option>
+            <option value="LA">LA — บริหารจัดการ</option>
+            <option value="LB">LB — ไฟฟ้าและพลังงาน</option>
+            <option value="LC">LC — อัคคีภัย</option>
+            <option value="LD">LD — สภาพแวดล้อม</option>
+            <option value="LE">LE — เครื่องจักร</option>
+            <option value="LF">LF — Service จัสเทล</option>
+          </select>
+        </div>
+        <div id="lawsTable" class="laws-table-wrap">
+          <div class="loading-state">กำลังโหลด...</div>
+        </div>
+      </div>
+
+      <!-- DEPARTMENT ASSIGNMENT -->
+      <div id="page-departments" class="page">
+        <div class="page-header">
+          <h2>มอบหมายหน่วยงานรับผิดชอบ</h2>
+          <p>เลือกกฎหมายและกำหนดหน่วยงาน/แผนกที่รับผิดชอบในการปฏิบัติตาม</p>
+        </div>
+        <div class="analyze-grid">
+          <div class="card">
+            <div class="card-title">🏢 กำหนดหน่วยงานรับผิดชอบ</div>
+            <div class="form-group">
+              <label>เลือกกฎหมาย</label>
+              <select id="deptLawSelect" class="input" onchange="onDeptLawSelected()">
+                <option value="">-- เลือกกฎหมาย --</option>
+              </select>
+            </div>
+            <div id="deptCurrentInfo" class="dept-current" style="display:none"></div>
+            <div class="form-group">
+              <label>หน่วยงาน/แผนกที่รับผิดชอบ</label>
+              <input list="deptOptions" id="deptUnitInput" class="input" placeholder="เช่น Safety, SHE, HR, คปอ. ..." />
+              <datalist id="deptOptions"></datalist>
+            </div>
+            <button class="btn-primary" onclick="saveDepartmentAssignment()">💾 บันทึกการมอบหมาย</button>
+          </div>
+          <div class="card">
+            <div class="card-title">📋 รายการมอบหมายปัจจุบัน</div>
+            <div class="filter-bar">
+              <input type="text" id="deptSearch" placeholder="ค้นหากฎหมาย..." class="input search-input" oninput="filterDeptTable()" />
+              <select id="deptCatFilter" class="input filter-select" onchange="filterDeptTable()">
+                <option value="">ทุกหมวด</option>
+              </select>
+            </div>
+            <div id="deptAssignTable" class="laws-table-wrap">
+              <div class="loading-state">กำลังโหลด...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI ANALYSIS PAGE — SKILL PANEL -->
+      <div id="page-analyze" class="page">
+        <div class="page-header">
+          <h2>วิเคราะห์กฎหมายด้วย AI</h2>
+          <p>Skill สรุปสาระสำคัญ — ใคร · ทำอะไร · ที่ไหน · อย่างไร · เอกสาร · ความถี่การตรวจสอบ</p>
+        </div>
+
+        <!-- Skill Tabs -->
+        <div class="skill-tabs">
+          <button class="skill-tab active" onclick="switchSkillTab('summary')" id="tab-summary">📋 สรุปสาระสำคัญ</button>
+          <button class="skill-tab" onclick="switchSkillTab('deep')" id="tab-deep">🔬 วิเคราะห์เชิงลึก</button>
+          <button class="skill-tab" onclick="switchSkillTab('checklist')" id="tab-checklist">✅ Checklist ปฏิบัติตาม</button>
+        </div>
+
+        <div class="analyze-grid">
+          <div class="card">
+            <div class="card-title">⚙ เลือกกฎหมายที่ต้องการวิเคราะห์</div>
+            <div class="form-group">
+              <label>เลือกกฎหมาย</label>
+              <select id="analyzeLawSelect" class="input" onchange="onLawSelected()">
+                <option value="">-- เลือกกฎหมาย --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>หรือวางเนื้อหากฎหมาย</label>
+              <textarea id="analyzeLawText" class="input textarea" rows="6" placeholder="วางข้อความกฎหมายที่ต้องการวิเคราะห์..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>ประเด็นพิเศษที่ต้องการเน้น</label>
+              <input type="text" id="analyzeContext" class="input" placeholder="เช่น ภาระหน้าที่นายจ้าง บทลงโทษ..." />
+            </div>
+
+            <!-- Skill options -->
+            <div class="skill-options" id="skillOptions-summary">
+              <div class="skill-option-title">ตัวเลือก Skill: สรุปสาระสำคัญ</div>
+              <label class="checkbox-row"><input type="checkbox" id="opt-who" checked /> ใคร (ผู้มีหน้าที่)</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-what" checked /> ทำอะไร (ภาระหน้าที่)</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-where" checked /> ที่ไหน (ขอบเขตบังคับใช้)</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-how" checked /> อย่างไร (วิธีปฏิบัติ)</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-docs" checked /> เอกสารที่เกี่ยวข้อง</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-freq" checked /> ความถี่การตรวจสอบ</label>
+            </div>
+            <div class="skill-options" id="skillOptions-deep" style="display:none">
+              <div class="skill-option-title">ตัวเลือก Skill: วิเคราะห์เชิงลึก</div>
+              <label class="checkbox-row"><input type="checkbox" id="opt-penalties" checked /> บทลงโทษ</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-risk" checked /> ระดับความเสี่ยง</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-dept" checked /> ภาระหน้าที่แยกตามแผนก</label>
+            </div>
+            <div class="skill-options" id="skillOptions-checklist" style="display:none">
+              <div class="skill-option-title">ตัวเลือก Skill: Checklist</div>
+              <label class="checkbox-row"><input type="checkbox" id="opt-checklist-monthly" checked /> รายการรายเดือน</label>
+              <label class="checkbox-row"><input type="checkbox" id="opt-checklist-annual" checked /> รายการรายปี</label>
+            </div>
+
+            <button class="btn-primary" style="margin-top:12px" onclick="runAnalysis()">
+              <span id="analyzeSpinner" style="display:none">⟳ </span>🤖 วิเคราะห์ด้วย AI
+            </button>
+          </div>
+
+          <div class="card analysis-result-card">
+            <div class="card-title" id="resultCardTitle">📊 ผลการวิเคราะห์</div>
+            <div id="analysisOutput" class="analysis-output">
+              <div class="empty-state">เลือกกฎหมายและ Skill แล้วกดวิเคราะห์</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+              <button id="saveAnalysisBtn" class="btn-secondary" style="display:none" onclick="saveAnalysis()">💾 บันทึกผล</button>
+              <button id="exportAnalysisBtn" class="btn-secondary" style="display:none" onclick="exportAnalysis()">📄 Export PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPLIANCE PAGE -->
+      <div id="page-compliance" class="page">
+        <div class="page-header">
+          <h2>บันทึกการปฏิบัติตามกฎหมาย</h2>
+          <p>ติดตามและบันทึกสถานะการปฏิบัติตามกฎหมายของแต่ละแผนก</p>
+        </div>
+        <div id="complianceContent">
+          <div class="loading-state">กำลังโหลด...</div>
+        </div>
+      </div>
+
+      <!-- EVALUATION / COMPLIANCE DASHBOARD PAGE -->
+      <div id="page-evaluation" class="page">
+        <div class="page-header">
+          <h2>ผลการประเมินความสอดคล้องของกฎหมาย</h2>
+          <p>ภาพรวมสถานะการปฏิบัติตามกฎหมาย แนวโน้ม และรายการที่ต้องดำเนินการแก้ไข</p>
+        </div>
+
+        <!-- Summary KPIs -->
+        <div class="stats-grid" style="margin-bottom:28px">
+          <div class="stat-card" style="--c:#2a9d8f">
+            <div class="stat-num" id="eval-compliant">—</div>
+            <div class="stat-label">สอดคล้อง (C)</div>
+          </div>
+          <div class="stat-card" style="--c:#457b9d">
+            <div class="stat-num" id="eval-partial">—</div>
+            <div class="stat-label">ไม่เกี่ยวข้อง (N/A)</div>
+          </div>
+          <div class="stat-card" style="--c:#e63946">
+            <div class="stat-num" id="eval-noncompliant">—</div>
+            <div class="stat-label">ไม่สอดคล้อง (NC)</div>
+          </div>
+          <div class="stat-card" style="--c:#c9a84c">
+            <div class="stat-num" id="eval-avg-score">—</div>
+            <div class="stat-label">% ความสอดคล้อง</div>
+          </div>
+        </div>
+
+        <div class="eval-grid">
+          <!-- Donut Chart -->
+          <div class="card">
+            <div class="card-title">📊 ภาพรวมสถานะความสอดคล้อง</div>
+            <div class="donut-wrap">
+              <svg id="donutChart" viewBox="0 0 200 200" width="200" height="200"></svg>
+              <div class="donut-legend" id="donutLegend"></div>
+            </div>
+          </div>
+
+          <!-- Overall Score Gauge -->
+          <div class="card">
+            <div class="card-title">🎯 คะแนนความสอดคล้องโดยรวม</div>
+            <div class="gauge-wrap">
+              <svg id="gaugeChart" viewBox="0 0 220 130" width="220" height="130"></svg>
+              <div class="gauge-label" id="gaugeLabel">—</div>
+              <div class="gauge-sub" id="gaugeSub">กำลังคำนวณ...</div>
+            </div>
+          </div>
+
+          <!-- Bar chart by law -->
+          <div class="card eval-bar-card">
+            <div class="card-title">📈 คะแนนความสอดคล้องรายกฎหมาย</div>
+            <div id="evalBarsContainer" class="eval-bars-container">
+              <div class="loading-state">กำลังโหลด...</div>
+            </div>
+          </div>
+
+          <!-- Non-compliant alerts -->
+          <div class="card">
+            <div class="card-title" style="color:var(--red)">⚠ รายการที่ต้องแก้ไขเร่งด่วน</div>
+            <div id="evalAlerts" class="eval-alerts">
+              <div class="loading-state">กำลังโหลด...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail Table -->
+        <div class="card" style="margin-top:8px">
+          <div class="card-title">📋 เอกสารกำกับดูแล (Regulatory Documents) และรายละเอียดกฎหมาย</div>
+          <div class="filter-bar" style="margin-bottom:16px">
+            <select id="evalStatusFilter" class="input filter-select" onchange="filterEvalTable()">
+              <option value="">สถานะทั้งหมด</option>
+              <option value="C">✓ สอดคล้อง (C)</option>
+              <option value="NC">✗ ไม่สอดคล้อง (NC)</option>
+              <option value="N/A">— N/A</option>
+            </select>
+            <select id="evalYearFilter" class="input filter-select" onchange="filterEvalTable()">
+              <option value="">ทุกปี</option>
+            </select>
+          </div>
+          <div id="evalDetailTable" class="laws-table-wrap">
+            <div class="loading-state">กำลังโหลด...</div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
